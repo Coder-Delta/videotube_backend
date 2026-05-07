@@ -3,9 +3,7 @@ import connectDB from "./db/index.js";
 import {app} from "../src/app.js"
 
 
-dotenv.config({
-  path: "./env",// it is the location of the .env file
-});
+dotenv.config();
 
 connectDB()
   .then(() => {
@@ -22,5 +20,4 @@ connectDB()
   .catch((error) => {
     console.log("MONGODB  CONNECTION FAILED!", error);
   });
-
 

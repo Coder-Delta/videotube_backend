@@ -1,13 +1,33 @@
 //professionaly approch
 //DB is in another continante
 
-import mongoose, { connect } from "mongoose";
+import mongoose from "mongoose";
 import { DB_NAME } from "../constants.js";
-import express from "express";
+
+export const buildMongoUri = (mongoUri, dbName = DB_NAME) => {
+  if (!mongoUri) {
+    throw new Error("MONGODB_URI is not set");
+  }
+
+  const trimmedUri = mongoUri.trim().replace(/\/+$/, "");
+  const hasQueryString = trimmedUri.includes("?");
+  const [baseUriRaw, queryString] = hasQueryString ? trimmedUri.split(/\?(.*)/s) : [trimmedUri, ""];
+  const baseUri = baseUriRaw.replace(/\/+$/, "");
+  const lastSegment = baseUri.split("/").filter(Boolean).pop() || "";
+  const hasDatabaseInPath = lastSegment !== "" && !lastSegment.includes("@") && !lastSegment.includes(":");
+
+  if (hasDatabaseInPath) {
+    return trimmedUri;
+  }
+
+  const uriWithDb = `${baseUri}/${dbName}`;
+  return queryString ? `${uriWithDb}?${queryString}` : uriWithDb;
+};
 
 const connectDB = async () => {
   try {
-    let connnectionInstance = await mongoose.connect(`${process.env.MONGODB_URI}/${DB_NAME}`)
+    const connectionUri = buildMongoUri(process.env.MONGODB_URI);
+    let connnectionInstance = await mongoose.connect(connectionUri);
     console.log(`\n MONGODB connected !! DB HOST: ${connnectionInstance.connection.host}`);
   } catch (error) {
     console.log("MONGODB Connection error ", error);

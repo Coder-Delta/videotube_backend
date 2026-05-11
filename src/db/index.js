@@ -6,7 +6,13 @@ import { DB_NAME } from "../constants.js";
 
 export const buildMongoUri = (mongoUri, dbName = DB_NAME) => {
   if (!mongoUri) {
-    throw new Error("MONGODB_URI is not set");
+    throw new Error("MONGODB_URI is not set in environment variables");
+  }
+
+  // Warn if credentials might be missing
+  if (!mongoUri.includes("@")) {
+    console.warn("⚠️  WARNING: MongoDB URI does not contain credentials. Authentication may fail.");
+    console.warn("Expected format: mongodb+srv://username:password@host/database");
   }
 
   const trimmedUri = mongoUri.trim().replace(/\/+$/, "");
@@ -27,11 +33,24 @@ export const buildMongoUri = (mongoUri, dbName = DB_NAME) => {
 const connectDB = async () => {
   try {
     const connectionUri = buildMongoUri(process.env.MONGODB_URI);
-    let connnectionInstance = await mongoose.connect(connectionUri);
-    console.log(`\n MONGODB connected !! DB HOST: ${connnectionInstance.connection.host}`);
+
+    const connnectionInstance = await mongoose.connect(connectionUri, {
+      retryWrites: true,
+      w: "majority",
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+    });
+
+    console.log(`\n ✅ MONGODB connected !! DB HOST: ${connnectionInstance.connection.host}`);
   } catch (error) {
-    console.log("MONGODB Connection error ", error);
-    process.exit(1);//need to study
+    console.error("❌ MONGODB Connection error:", error.message);
+
+    if (error.message.includes("authentication failed")) {
+      console.error("💡 Hint: Check your MongoDB credentials in the MONGODB_URI environment variable");
+      console.error("Expected format: mongodb+srv://username:password@cluster.mongodb.net");
+    }
+
+    process.exit(1);
   }
 };
 

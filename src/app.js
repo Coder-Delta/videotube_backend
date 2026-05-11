@@ -2,6 +2,7 @@ import express from "express"
 import cors from "cors"
 import cookieParser from "cookie-parser"
 import { globalLimiter } from "./middlewares/ratelimit.middlewares.js"
+import { multerErrorHandler } from "./middlewares/multer.middlewares.js"
 
 const app = express()
 
@@ -81,6 +82,21 @@ app.use("/api/v1/playlist", playlistRouter)
 app.use("/api/v1/dashboard", dashboardRouter)
 
 
+// ---------------------- Error Handling Middlewares ----------------------
+// Multer error handler - must be after all routes
+app.use(multerErrorHandler);
+
+// Global error handler
+app.use((err, req, res, next) => {
+  const statusCode = err.statusCode || 500;
+  const message = err.message || "Internal Server Error";
+
+  res.status(statusCode).json({
+    success: false,
+    message,
+    ...(process.env.NODE_ENV === "development" && { error: err }),
+  });
+});
 
 // ---------------------- Export ----------------------
 export { app }
